@@ -1,0 +1,2 @@
+Epoch: 9/30. Train set: Average loss: 0.2605	Average nonzero triplets: 202.44769874476987
+Epoch: 9/30. Validation set: Average loss: 0.2733	Average nonzero triplets: 236.82051282051282

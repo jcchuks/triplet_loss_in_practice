@@ -1,0 +1,2 @@
+
+	trueAccept: 31.90625	trueReject: 18.09375	falseAccept: 23.809294871794872	falseReject: 26.190705128205128	Accuracy: 58.09695512820513	svmAcc: 96.0
