@@ -1,0 +1,3 @@
+[submodule "opensource/siamesetriplet"]
+	path = opensource/siamesetriplet
+	url = https://github.com/jcchuks/siamese-triplet.git
