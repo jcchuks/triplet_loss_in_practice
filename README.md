@@ -30,7 +30,7 @@ Results on the three variants were obtained on the MNIST dataset and the https:/
 
 # Acknowledgements:
 
-Thanks to Adam, this work forked and extended from <a href="https://github.com/adambielski/siamese-triplet">Adam Bielski's</a> code.
+Thanks to Adam, this work was forked and extended from <a href="https://github.com/adambielski/siamese-triplet">Adam Bielski's</a> siamese-triplet repo.
 
 Experiments were carried out on <a href="https://carleton.ca/scs/tech-support/gpu/scs-gpu-cuda10-ubuntu18-04/"> Carleton University's </a> GPU
 
