@@ -1,0 +1,18 @@
+EmbeddingNet(
+  (convnet): Sequential(
+    (0): Conv2d(1, 32, kernel_size=(5, 5), stride=(1, 1))
+    (1): PReLU(num_parameters=1)
+    (2): MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False)
+    (3): Conv2d(32, 64, kernel_size=(5, 5), stride=(1, 1))
+    (4): PReLU(num_parameters=1)
+    (5): MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False)
+  )
+  (fc): Sequential(
+    (0): Linear(in_features=1024, out_features=256, bias=True)
+    (1): PReLU(num_parameters=1)
+    (2): Linear(in_features=256, out_features=256, bias=True)
+    (3): PReLU(num_parameters=1)
+    (4): Linear(in_features=256, out_features=2, bias=True)
+  )
+)
+

@@ -6,7 +6,6 @@ import torch.optim as optim
 from torchvision import datasets, transforms, models
 from opensource.siamesetriplet.datasets import BalancedBatchSampler
 from opensource.siamesetriplet.losses import  OnlineTripletLossV3, OnlineTripletLossV4, OnlineTripletLossV5
-from opensource.facenetpytorch import InceptionResnetV1
 from extended_model import  HowGoodIsTheModel, LilNet, IdentityNN, InputNet, EmbeddingNet
 from torchsummary import summary
 from sklearn import svm
