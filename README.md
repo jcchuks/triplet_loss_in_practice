@@ -10,13 +10,13 @@ Tracking Persons-of-Interest via Adaptive Discriminative Features - Zhang et al.
 ```
 The triplet loss and the variants can be found as a submodule in the folder `opensource/siamesetriplet` or by direct link to https://github.com/jcchuks/siamese-triplet/blob/master/losses.py.
 
-Balntas et al is implemented in `OnlineTripletLossV3`
+- Balntas et al is implemented in `OnlineTripletLossV3`
 
-Zhang et al is implemented in `OnlineTripletLossV4`
+- Zhang et al is implemented in `OnlineTripletLossV4`
 
-Schroff et al is implemented in `OnlineTripletLossV5`.
+- Schroff et al is implemented in `OnlineTripletLossV5`.
 
-The distance metric used is Euclidean distance.
+The distance metric used is *Euclidean distance*.
 
 Results on the three variants were obtained on the MNIST dataset and the https://www.kaggle.com/paultimothymooney/chest-xray-pneumonia dataset. All raw results can be found in folders with `result` as part of filename.
 
@@ -27,6 +27,26 @@ Results on the three variants were obtained on the MNIST dataset and the https:/
 
 <img src="https://github.com/jcchuks/triplet_loss_in_practice/blob/master/zhang_result_xray/clusters/trainVideo/loop.gif" width=200 height=200/>
 </p>
+
+# Install:
+prefered env setup and installation method - conda
+Setup and activate virtual enviroment (not necessary)
+Clone repo with submodules - `git clone --recurse-submodules https://github.com/jcchuks/triplet_loss_in_practice.git`
+- Install `pytorch ` 
+- Install `sklearn ` 
+- Install `matplotlib ` 
+- Install `searborn`  
+
+## Run
+- Activate virtual env if used
+    - `cd triplet_loss_in_practice`
+    - `python main.py`
+
+It should run the network using test data in `dataset/chest_xray/test_chest_xray_model` for 2 epochs.
+A folder `result` is created with logs and plots.
+
+`python main.py -h` for more options
+
 
 # Acknowledgements:
 

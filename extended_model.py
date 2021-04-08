@@ -3,21 +3,26 @@ import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
 from opensource.siamesetriplet.utils import pdist
-from opensource.facenetpytorch.models.inception_resnet_v1 import InceptionResnetV1
 from torch.nn.modules.distance import PairwiseDistance
+from constants import *
 
 
 class EmbeddingNet(nn.Module):
     def __init__(self):
         super(EmbeddingNet, self).__init__()
-        self.convnet = nn.Sequential(nn.Conv2d(1, 32, 5), nn.PReLU(),
+        input = nn.Conv2d(1, 32, 5)
+        connector = nn.Linear(64 * 4 * 4, 256)
+        if dataset_type == 'xray':
+            input = nn.Conv2d(3, 32, 5)
+            connector = nn.Linear(64 * 107 * 107, 256)
+        self.convnet = nn.Sequential(input,
+                                     nn.PReLU(),
                                      nn.MaxPool2d(2, stride=2),
                                      nn.Conv2d(32, 64, 5), nn.PReLU(),
                                      nn.MaxPool2d(2, stride=2))
 
-           #nn.Linear(64 * 4 * 4, 256),
-        self.fc = nn.Sequential(#nn.Linear(64 * 107 * 107, 256),
-                                nn.Linear(64 * 4 * 4, 256),
+
+        self.fc = nn.Sequential(connector,
                                 nn.PReLU(),
                                 nn.Linear(256, 256),
                                 nn.PReLU(),
@@ -45,7 +50,11 @@ class IdentityNN(nn.Module):
 class InputNet(nn.Module):
     def __init__(self):
         super(InputNet, self).__init__()
-        self.convnet = nn.Sequential(nn.Conv2d(1, 32, 3), nn.PReLU(),
+        input = nn.Conv2d(1, 32, 3)
+        if shared_params["dataset_type"] == 'xray':
+            input = nn.Conv2d(3, 32, 5)
+        self.convnet = nn.Sequential(input,
+                                     nn.PReLU(),
                                      nn.MaxPool2d(2, stride=2),
                                      nn.Conv2d(32, 64, 5), nn.PReLU(),
                                      nn.MaxPool2d(2, stride=1),
@@ -62,10 +71,13 @@ class InputNet(nn.Module):
 
 
 class LilNet(nn.Module):
-    def __init__(self, in_channel):
-        super(LilNet, self).__init__()  
+    def __init__(self):
+        super(LilNet, self).__init__()
+
         in_channel = 1024
-        #self.flat = nn.Flatten()
+        if shared_params["dataset_type"] == 'xray':
+            in_channel = 746496
+
         self.fc = nn.Sequential(nn.Flatten(),
                                 nn.Linear(in_channel, 1024),
                                 nn.PReLU(),

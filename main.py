@@ -7,7 +7,6 @@ from torchvision import datasets, transforms, models
 from opensource.siamesetriplet.datasets import BalancedBatchSampler
 from opensource.siamesetriplet.losses import  OnlineTripletLossV3, OnlineTripletLossV4, OnlineTripletLossV5
 from extended_model import  HowGoodIsTheModel, LilNet, IdentityNN, InputNet, EmbeddingNet
-from torchsummary import summary
 from sklearn import svm
 from six.moves import urllib
 
@@ -25,27 +24,36 @@ from opensource.siamesetriplet.utils import SemihardNegativeTripletSelector, Ran
 from opensource.trainer import validate_recognition_task
 
 import sys
-is_live = sys.argv[1] == "live" if len(sys.argv) >= 2 else False
-use_saved_model = False
-if len(sys.argv) >= 3 and sys.argv[2] == "load":
-	use_saved_model = "load"
-elif len(sys.argv) >= 3 and  sys.argv[2] == "mnist":
-	use_saved_model = "mnist"
-train_folder = "train"
-test_folder = "test"
-validate_folder = "val"
-test_example_path = "dataset/chest_xray"
-main_training_sample_path = "dataset/chest_xray/chest_xray"
-base_path = test_example_path
-best_model_file_name = "best_model.pt"
-label_dir = ['NORMAL', 'PNEUMONIA']
-mean =  [0.485, 0.456, 0.406]
-std = [0.229, 0.224, 0.225]
-batch = 7
-margin = 1
+from constants import *
+import argparse
+
+parser = argparse.ArgumentParser(description='Triplet loss in practice')
+parser.add_argument('-m','--mode', help='set to "1" to use a path corresponding to main data \n '
+                                        'or "0" to use a path corresponding to a small subset'
+                                        ' of data usually for test. see "base_path" in code', default=0)
+parser.add_argument('-p','--pretrained', help='set to 0 to use the vanilla Embedding Net model or set to 1 to use the '
+                                              'resenet model with InputNet, IdentityNet and LilNet, '
+                                              'only vanilla model is supported on the mnist dataset. '
+                                              'To support resnet + Lilnet, adjust the input channels on LilNet, '
+                                              'and InputNet accordingly on mnist', default=0)
+parser.add_argument('-d','--data', help='set to "mnist" to use mnist dataset or "xray" to use the '
+                                        'kaggle chest xray data', default='xray')
+parser.add_argument('-t','--resume', help='Used to reload a previously saved model to continue training', default=0)
+args = parser.parse_args()
+
+
+if args.mode == 1:
+	is_live = True
+if args.pretrained == 0:
+	use_vanilla_model = True
+if args.resume == 1:
+	resume_training = True
+if args.data == "mnist":
+	shared_params["dataset_type"] = "mnist"
+
 torch.autograd.set_detect_anomaly(True)
 cuda = torch.cuda.is_available()
-n_epochs = 2
+
 if is_live:
     n_epochs = 30
     margin = 1
@@ -55,43 +63,39 @@ log_interval = 20
 train_loader, test_loader, validate_loader, model = None, None, None, None
 device = torch.device("cuda:0" if cuda else "cpu")
 
-colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728',
-          '#9467bd', '#8c564b', '#e377c2', '#7f7f7f',
-          '#bcbd22', '#17becf']
-training_and_validation_metric = "t_and_v"
-recognition_metric_name = "recog"
-result_folder = "./result/"
-loss_graph = "loss.png"
-metric_graph = "metric.png"
+
 os.makedirs(result_folder, exist_ok=True)
 
-def load_mnist(): 
-	mean, std = 0.1307, 0.3081
-    
-	train_dataset = MNIST('./data', train=True, download=True,
-		                     transform=transforms.Compose([
-		                         transforms.ToTensor(),
-		                         transforms.Normalize((mean,), (std,))
-		                     ]))
-	test_dataset = MNIST('./data', train=False, download=True,
-		                    transform=transforms.Compose([
-		                        transforms.ToTensor(),
-		                        transforms.Normalize((mean,), (std,))
-		                    ]))
-	n_classes = 10
- 
-	# We'll create mini batches by sampling labels that will be present in the mini batch and number of examples from each class
-	train_batch_sampler = BalancedBatchSampler(train_dataset.train_labels, n_classes=10, n_samples=25)
-	test_batch_sampler = BalancedBatchSampler(test_dataset.test_labels, n_classes=10, n_samples=25)
+def load_mnist():
+    global shared_params
+    mean, std = 0.1307, 0.3081
 
-	kwargs = {'num_workers': 1, 'pin_memory': True} if cuda else {}
-	online_train_loader = torch.utils.data.DataLoader(train_dataset, batch_sampler=train_batch_sampler, **kwargs)
-	online_test_loader = torch.utils.data.DataLoader(test_dataset, batch_sampler=test_batch_sampler, **kwargs)
-	return online_train_loader, online_test_loader
+    train_dataset = MNIST('./data', train=True, download=True,
+                             transform=transforms.Compose([
+                                 transforms.ToTensor(),
+                                 transforms.Normalize((mean,), (std,))
+                             ]))
+    test_dataset = MNIST('./data', train=False, download=True,
+                            transform=transforms.Compose([
+                                transforms.ToTensor(),
+                                transforms.Normalize((mean,), (std,))
+                            ]))
+    shared_params["classes"] = 10
+
+    # We'll create mini batches by sampling labels that will be present in the mini batch and number of examples from each class
+    train_batch_sampler = BalancedBatchSampler(train_dataset.train_labels, n_classes=10, n_samples=25)
+    test_batch_sampler = BalancedBatchSampler(test_dataset.test_labels, n_classes=10, n_samples=25)
+
+    kwargs = {'num_workers': 1, 'pin_memory': True} if cuda else {}
+    online_train_loader = torch.utils.data.DataLoader(train_dataset, batch_sampler=train_batch_sampler, **kwargs)
+    online_test_loader = torch.utils.data.DataLoader(test_dataset, batch_sampler=test_batch_sampler, **kwargs)
+    return online_train_loader, online_test_loader
 
 	
 def loader(folder, dType=1, train="", nbatch=batch):
+    global shared_params
     mean, std = 0.1307, 0.3081
+
     transform = transforms.Compose(transforms=[transforms.Resize(320),
                                                transforms.CenterCrop(440),
                                                transforms.ToTensor(),
@@ -105,7 +109,7 @@ def loader(folder, dType=1, train="", nbatch=batch):
     if dType == 1:
         print(f"{train} image size: {len(data_sets.samples)}")
     # triplets_dataset = TripletXRay(data_sets, dType) 
-
+    shared_params["classes"] = 2
     data_loader = DataLoader(data_sets, batch_sampler=batch_sampler, num_workers=4)
     # draw(data_loader, train)
     return data_loader
@@ -167,8 +171,8 @@ def get_model():
     base_model = InputNet()
     trunk_model = models.resnet18(pretrained=True)
     # print(trunk_model)
-    in_channel = 389376
-    output_model = LilNet(in_channel)
+    #in_channel = 389376
+    output_model = LilNet()
     # summary(trunk_model,(3,299,299))
     for param in trunk_model.parameters():
         param.requires_grad = True
@@ -182,11 +186,9 @@ def get_model():
     trunk_model.layer4 = output_model
     trunk_model.avgpool = IdentityNN()
     trunk_model.fc = IdentityNN()
-    # print(base_model)
-    base_model.to(device)
-    # raise Exception("sdfa")
-    #if use_saved_model == "mnist":
-    base_model = EmbeddingNet()
+
+    if use_vanilla_model == "mnist":
+        base_model = EmbeddingNet()
     base_model.to(device)
     
     return base_model 
@@ -207,7 +209,7 @@ def main(tripletLoss, testName):
     global train_loader, test_loader, validate_loader, model, use_saved_model
 
     model = get_model()
-    if use_saved_model == "mnist":
+    if shared_params["dataset_type"] == "mnist":
     	train_loader, validate_loader = load_mnist()
     	test_loader = validate_loader
     	print(f"Loading mnist data")
@@ -224,7 +226,7 @@ def main(tripletLoss, testName):
     lr = 1e-3
     w_decay = 1e-4
     optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=w_decay)
-    if use_saved_model == "load":
+    if resume_training:
         loadmodel(model, optimizer, best_model_path, testName)	
     scheduler = optim.lr_scheduler.StepLR(optimizer, 8, gamma=0.1, last_epoch=-1)
 
@@ -283,7 +285,7 @@ def do_recognition(loader, testName, types):
 if "__main__" == __name__: 
     for tripletLossLayer, testname in [(OnlineTripletLossV4, "_tripletLossXRay")]:
         main(tripletLossLayer, testname)
-        if use_saved_model == "mnist":
+        if shared_params["dataset_type"] == "mnist":
         	train_loader, validate_loader = load_mnist()
         	test_loader = validate_loader
         else:
